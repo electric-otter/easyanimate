@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EasyAnimation - User Created Animations</title>
+
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" />
+
+  <!-- Spectre CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/spectre.css/dist/spectre.min.css" rel="stylesheet" />
+
+  <style>
+    body {
+      background-color: #f4f4f9;
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    .header {
+      text-align: center;
+      margin-top: 20px;
+    }
+    .canvas-container {
+      border: 2px solid #ccc;
+      width: 80%;
+      height: 400px;
+      margin: 20px auto;
+      background-color: #fff;
+      position: relative;
+    }
+    #canvas {
+      width: 100%;
+      height: 100%;
+      border: 1px solid #ddd;
+    }
+    .controls {
+      margin-top: 20px;
+      text-align: center;
+    }
+    .controls .form-group {
+      display: inline-block;
+      margin: 0 10px;
+    }
+    .animation-actions {
+      margin-top: 20px;
+      text-align: center;
+    }
+    .dev-mode-container {
+      margin-top: 30px;
+    }
+    #dev-mode {
+      width: 100%;
+      height: 200px;
+      font-family: monospace;
+      background-color: #f4f4f4;
+      border: 1px solid #ddd;
+      padding: 10px;
+      color: #333;
+      resize: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>EasyAnimation - User Created Animations</h1>
+      <p>Use the controls below to create and animate your own shapes!</p>
+    </div>
+
+    <!-- Animation Canvas -->
+    <div class="canvas-container">
+      <canvas id="canvas"></canvas>
+    </div>
+
+    <!-- UI Controls to Create Animations -->
+    <div class="controls">
+      <div class="row justify-content-center">
+        <div class="col-md-2 form-group">
+          <label for="fill-color">Fill Color:</label>
+          <input type="color" id="fill-color" value="#3498db">
+        </div>
+        <div class="col-md-2 form-group">
+          <label for="speed-control">Speed:</label>
+          <input type="number" id="speed-control" min="1" max="10" value="2">
+        </div>
+        <div class="col-md-2 form-group">
+          <label for="x-position">X Position:</label>
+          <input type="number" id="x-position" value="100">
+        </div>
+        <div class="col-md-2 form-group">
+          <label for="y-position">Y Position:</label>
+          <input type="number" id="y-position" value="100">
+        </div>
+      </div>
+      <div class="row justify-content-center mt-3">
+        <button class="btn btn-primary" id="add-animation">Add Animation</button>
+      </div>
+    </div>
+
+    <!-- Animation Actions -->
+    <div class="animation-actions">
+      <button class="btn btn-success" id="start-animations">Start Animations</button>
+      <button class="btn btn-danger" id="stop-animations" disabled>Stop Animations</button>
+      <button class="btn btn-warning" id="clear-animations">Clear Animations</button>
+    </div>
+
+    <!-- Dev Mode - Text-Based AnimateScript -->
+    <div class="dev-mode-container">
+      <h3>Dev Mode: Write your AnimateScript Code</h3>
+      <textarea id="dev-mode" placeholder="Type your AnimateScript code here..."></textarea>
+      <button class="btn btn-primary" id="run-script">Run Script</button>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Spectre JS -->
+  <script src="https://cdn.jsdelivr.net/npm/spectre.css/dist/spectre.min.js"></script>
+
+  <script>
+    // Setup canvas context and dimensions
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+
+    // UI Elements
+    const fillColorInput = document.getElementById('fill-color');
+    const speedInput = document.getElementById('speed-control');
+    const xPositionInput = document.getElementById('x-position');
+    const yPositionInput = document.getElementById('y-position');
+    const addAnimationBtn = document.getElementById('add-animation');
+    const startAnimationsBtn = document.getElementById('start-animations');
+    const stopAnimationsBtn = document.getElementById('stop-animations');
+    const clearAnimationsBtn = document.getElementById('clear-animations');
+    const runScriptBtn = document.getElementById('run-script');
+    const devModeTextarea = document.getElementById('dev-mode');
+
+    // Array to store shape animations
+    let animations = [];
+    let isAnimating = false;
+    let animationFrameId;
+
+    // Create a new shape object based on UI parameters
+    function createShape() {
+      const fillColor = fillColorInput.value;
+      const speed = parseFloat(speedInput.value) || 2;
+      const startX = parseFloat(xPositionInput.value) || 100;
+      const startY = parseFloat(yPositionInput.value) || 100;
+
+      // Create a shape with a random initial direction
+      return {
+        x: startX,
+        y: startY,
+        radius: 20,
+        dx: (Math.random() > 0.5 ? 1 : -1) * speed,
+        dy: (Math.random() > 0.5 ? 1 : -1) * speed,
+        color: fillColor
+      };
+    }
+
+    // Handle Add Animation button click
+    addAnimationBtn.addEventListener('click', function() {
+      const shape = createShape();
+      animations.push(shape);
+      drawAllShapes(); // Draw the new shape immediately
+    });
+
+    // Function to draw all shapes in the animations array
+    function drawAllShapes() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      animations.forEach(shape => {
+        ctx.beginPath();
+        ctx.arc(shape.x, shape.y, shape.radius, 0, 2 * Math.PI);
+        ctx.fillStyle = shape.color;
+        ctx.fill();
+      });
+    }
+
+    // Animation loop: update positions, handle bouncing, and redraw shapes
+    function animate() {
+      if (!isAnimating) return;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      animations.forEach((shape) => {
+        // Bounce off canvas edges
+        if (shape.x + shape.radius >= canvas.width || shape.x - shape.radius <= 0) {
+          shape.dx = -shape.dx;
+        }
+        if (shape.y + shape.radius >= canvas.height || shape.y - shape.radius <= 0) {
+          shape.dy = -shape.dy;
+        }
+        // Update position
+        shape.x += shape.dx;
+        shape.y += shape.dy;
+
+        // Draw the shape
+        ctx.beginPath();
+        ctx.arc(shape.x, shape.y, shape.radius, 0, 2 * Math.PI);
+        ctx.fillStyle = shape.color;
+        ctx.fill();
+      });
+      animationFrameId = requestAnimationFrame(animate);
+    }
+
+    // Start Animations handler
+    startAnimationsBtn.addEventListener('click', function() {
+      if (isAnimating) return;
+      isAnimating = true;
+      animate();
+      startAnimationsBtn.disabled = true;
+      stopAnimationsBtn.disabled = false;
+    });
+
+    // Stop Animations handler
+    stopAnimationsBtn.addEventListener('click', function() {
+      isAnimating = false;
+      cancelAnimationFrame(animationFrameId);
+      startAnimationsBtn.disabled = false;
+      stopAnimationsBtn.disabled = true;
+    });
+
+    // Clear Animations: stop animation, clear shapes, and clear the canvas
+    clearAnimationsBtn.addEventListener('click', function() {
+      isAnimating = false;
+      cancelAnimationFrame(animationFrameId);
+      animations = [];
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      startAnimationsBtn.disabled = false;
+      stopAnimationsBtn.disabled = true;
+    });
+
+    // Dev Mode - Run AnimateScript (placeholder)
+    runScriptBtn.addEventListener('click', function() {
+      const script = devModeTextarea.value;
+      console.log("Running AnimateScript:", script);
+      alert("Running AnimateScript is not implemented yet.");
+    });
+  </script>
+</body>
+</html>
